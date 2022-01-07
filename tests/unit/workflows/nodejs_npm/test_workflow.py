@@ -8,7 +8,7 @@ from aws_lambda_builders.workflows.nodejs_npm.esbuild import SubprocessEsbuild
 from aws_lambda_builders.workflows.nodejs_npm.actions import (
     NodejsNpmPackAction,
     NodejsNpmInstallAction,
-    NodejsNpmrcCopyAction,
+    NodejsCopyAction,
     NodejsNpmrcCleanUpAction,
     NodejsNpmLockFileCleanUpAction,
     NodejsNpmCIAction,
@@ -55,17 +55,59 @@ class TestNodejsNpmWorkflow(TestCase):
 
     def test_workflow_sets_up_npm_actions_without_bundler_if_manifest_doesnt_request_it(self):
 
+        self.osutils.file_exists.side_effect = [False, False]
+
         workflow = NodejsNpmWorkflow("source", "artifacts", "scratch_dir", "manifest", osutils=self.osutils)
 
         self.assertEqual(len(workflow.actions), 6)
 
         self.assertIsInstance(workflow.actions[0], NodejsNpmPackAction)
 
-        self.assertIsInstance(workflow.actions[1], NodejsNpmrcCopyAction)
+        self.assertIsInstance(workflow.actions[1], NodejsCopyAction)
 
         self.assertIsInstance(workflow.actions[2], CopySourceAction)
 
         self.assertIsInstance(workflow.actions[3], NodejsNpmInstallAction)
+
+        self.assertIsInstance(workflow.actions[4], NodejsNpmrcCleanUpAction)
+
+        self.assertIsInstance(workflow.actions[5], NodejsNpmLockFileCleanUpAction)
+
+    def test_workflow_without_bundler_uses_ci_if_lockfile_exists(self):
+
+        self.osutils.file_exists.side_effect = [True]
+
+        workflow = NodejsNpmWorkflow("source", "artifacts", "scratch_dir", "manifest", osutils=self.osutils)
+
+        self.assertEqual(len(workflow.actions), 6)
+
+        self.assertIsInstance(workflow.actions[0], NodejsNpmPackAction)
+
+        self.assertIsInstance(workflow.actions[1], NodejsCopyAction)
+
+        self.assertIsInstance(workflow.actions[2], CopySourceAction)
+
+        self.assertIsInstance(workflow.actions[3], NodejsNpmCIAction)
+
+        self.assertIsInstance(workflow.actions[4], NodejsNpmrcCleanUpAction)
+
+        self.assertIsInstance(workflow.actions[5], NodejsNpmLockFileCleanUpAction)
+
+    def test_workflow_without_bundler_uses_ci_if_shrinkwrap_exists(self):
+
+        self.osutils.file_exists.side_effect = [False, True]
+
+        workflow = NodejsNpmWorkflow("source", "artifacts", "scratch_dir", "manifest", osutils=self.osutils)
+
+        self.assertEqual(len(workflow.actions), 6)
+
+        self.assertIsInstance(workflow.actions[0], NodejsNpmPackAction)
+
+        self.assertIsInstance(workflow.actions[1], NodejsCopyAction)
+
+        self.assertIsInstance(workflow.actions[2], CopySourceAction)
+
+        self.assertIsInstance(workflow.actions[3], NodejsNpmCIAction)
 
         self.assertIsInstance(workflow.actions[4], NodejsNpmrcCleanUpAction)
 

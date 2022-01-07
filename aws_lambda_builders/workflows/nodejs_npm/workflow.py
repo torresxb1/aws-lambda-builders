@@ -14,7 +14,7 @@ from .actions import (
     NodejsNpmPackAction,
     NodejsNpmLockFileCleanUpAction,
     NodejsNpmInstallAction,
-    NodejsNpmrcCopyAction,
+    NodejsCopyAction,
     NodejsNpmrcCleanUpAction,
     NodejsNpmCIAction,
     EsbuildBundleAction
@@ -42,18 +42,23 @@ class NodejsNpmWorkflow(BaseWorkflow):
     CONFIG_PROPERTY = "aws_sam"
 
     def actions_without_bundler(self, source_dir, artifacts_dir, scratch_dir, manifest_path, osutils, subprocess_npm):
+        lockfile_path = osutils.joinpath(source_dir, "package-lock.json")
+        shrinkwrap_path = osutils.joinpath(source_dir, "npm-shrinkwrap.json")
         tar_dest_dir = osutils.joinpath(scratch_dir, "unpacked")
         tar_package_dir = osutils.joinpath(tar_dest_dir, "package")
         npm_pack = NodejsNpmPackAction(
             tar_dest_dir, scratch_dir, manifest_path, osutils=osutils, subprocess_npm=subprocess_npm
         )
-        npm_install = NodejsNpmInstallAction(artifacts_dir, subprocess_npm=subprocess_npm)
-        npm_copy_npmrc = NodejsNpmrcCopyAction(tar_package_dir, source_dir, osutils=osutils)
+        if (osutils.file_exists(lockfile_path) or osutils.file_exists(shrinkwrap_path)):
+            install_action = NodejsNpmCIAction(artifacts_dir, subprocess_npm=subprocess_npm)
+        else:
+            install_action = NodejsNpmInstallAction(artifacts_dir, subprocess_npm=subprocess_npm)
+        npm_copy = NodejsCopyAction(tar_package_dir, source_dir, osutils=osutils)
         return [
             npm_pack,
-            npm_copy_npmrc,
+            npm_copy,
             CopySourceAction(tar_package_dir, artifacts_dir, excludes=self.EXCLUDED_FILES),
-            npm_install,
+            install_action,
             NodejsNpmrcCleanUpAction(artifacts_dir, osutils=osutils),
             NodejsNpmLockFileCleanUpAction(artifacts_dir, osutils=osutils),
         ]

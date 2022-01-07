@@ -162,14 +162,14 @@ class NodejsNpmCIAction(BaseAction):
             raise ActionFailedError(str(ex))
 
 
-class NodejsNpmrcCopyAction(BaseAction):
+class NodejsCopyAction(BaseAction):
 
     """
-    A Lambda Builder Action that copies NPM config file .npmrc
+    A Lambda Builder Action that copies NPM config file .npmrc and package-lock.json
     """
 
-    NAME = "CopyNpmrc"
-    DESCRIPTION = "Copying configuration from .npmrc"
+    NAME = "Copy"
+    DESCRIPTION = "Copying configuration from .npmrc and dependencies from package-lock.json"
     PURPOSE = Purpose.COPY_SOURCE
 
     def __init__(self, artifacts_dir, source_dir, osutils):
@@ -185,7 +185,7 @@ class NodejsNpmrcCopyAction(BaseAction):
         :param osutils: An instance of OS Utilities for file manipulation
         """
 
-        super(NodejsNpmrcCopyAction, self).__init__()
+        super(NodejsCopyAction, self).__init__()
         self.artifacts_dir = artifacts_dir
         self.source_dir = source_dir
         self.osutils = osutils
@@ -194,14 +194,15 @@ class NodejsNpmrcCopyAction(BaseAction):
         """
         Runs the action.
 
-        :raises lambda_builders.actions.ActionFailedError: when .npmrc copying fails
+        :raises lambda_builders.actions.ActionFailedError: when copying fails
         """
 
         try:
-            npmrc_path = self.osutils.joinpath(self.source_dir, ".npmrc")
-            if self.osutils.file_exists(npmrc_path):
-                LOG.debug(".npmrc copying in: %s", self.artifacts_dir)
-                self.osutils.copy_file(npmrc_path, self.artifacts_dir)
+            for filename in [".npmrc", "package-lock.json"]:
+                file_path = self.osutils.joinpath(self.source_dir, filename)
+                if self.osutils.file_exists(file_path):
+                    LOG.debug("%s copying in: %s", filename, self.artifacts_dir)
+                    self.osutils.copy_file(file_path, self.artifacts_dir)
 
         except OSError as ex:
             raise ActionFailedError(str(ex))
