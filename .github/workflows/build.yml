@@ -97,7 +97,6 @@ jobs:
 
   node-esbuild-integration:
     name: ${{ matrix.os }} / ${{ matrix.python }} / esbuild / npm ${{ matrix.npm }}.x
-    if: github.repository_owner == 'aws'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
